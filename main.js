@@ -232,9 +232,8 @@ class Fordpass extends utils.Adapter {
 		});
 	}
 
-	async publishVehicleDataAsync(object, stateName, vehicleData, valuePath) {
-		// check if value exists
-		if (!object || !vehicleData || !stateName || valuePath)
+	async publishVehicleDataAsync(stateName, vehicleData, valuePath) {
+		if (!vehicleData || !stateName || !valuePath)
 			return;
 
 		const properties = valuePath.split(".");
@@ -251,7 +250,7 @@ class Fordpass extends utils.Adapter {
 			}
 		}
 
-		await object.setStateAsync(stateName, { val: value, ack: true });
+		await this.setStateAsync(stateName, { val: value, ack: true });
 	}
 
 	/**
