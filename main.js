@@ -36,9 +36,9 @@ class Fordpass extends utils.Adapter {
 	 * Is called when databases are connected and adapter received configuration.
 	 */
 	async onReady() {
+		this.log.info("onReady entered");
 
-
-		const car = new fordApi.vehicle(this.config.user, this.config.password, this.config.vin);
+		//const car = new fordApi.vehicle(this.config.user, this.config.password, this.config.vin);
 		// Initialize your adapter here
 
 		// The adapters config (in the instance object everything under the attribute "native") is accessible via
@@ -53,10 +53,10 @@ class Fordpass extends utils.Adapter {
 		Here a simple template for a boolean variable named "testVariable"
 		Because every adapter instance uses its own unique namespace variable names can't collide with other adapters variables
 		*/
-		await car.auth();
+		//await car.auth();
 
 		// to view current vehicle information including location
-		const vehicleData = await car.status();
+		//const vehicleData = await car.status();
 
 		this.setObjectNotExistsAsync("VIN", {
 			type: "state",
@@ -202,6 +202,7 @@ class Fordpass extends utils.Adapter {
 			native: {},
 		});
 
+		/*
 		this.setStateAsync("VIN", vehicleData.vin);
 		this.setStateAsync("Lockstatus",vehicleData.lockStatus.value);
 		this.setStateAsync("Odometer", vehicleData.odometer.value);
@@ -214,54 +215,11 @@ class Fordpass extends utils.Adapter {
 		this.setStateAsync("oilLifeActual", vehicleData.oil.oilLifeActual);
 		this.setStateAsync("batteryHealth",vehicleData.battery.batteryHealth.value);
 		this.setStateAsync("batteryStatusActual", vehicleData.battery.batteryStatusActual.value);
-		this.setStateAsync("tirePressure", vehicleData.tirePressure.value);
+		this.setStateAsync("tirePressure", vehicleData.tirePressure.value);*/
 
+		await main(this);
 
-		setInterval(main, this.config.interval, this);
-
-
-
-
-		/*
-		await this.setObjectNotExistsAsync("testVariable", {
-			type: "state",
-			common: {
-				name: "testVariable",
-				type: "boolean",
-				role: "indicator",
-				read: true,
-				write: true,
-			},
-			native: {},
-		});
-*/
-		// In order to get state updates, you need to subscribe to them. The following line adds a subscription for our variable we have created above.
-		//this.subscribeStates("testVariable");
-		// You can also add a subscription for multiple states. The following line watches all states starting with "lights."
-		// this.subscribeStates("lights.*");
-		// Or, if you really must, you can also watch all states. Don't do this if you don't need to. Otherwise this will cause a lot of unnecessary load on the system:
-		// this.subscribeStates("*");
-
-		/*
-			setState examples
-			you will notice that each setState will cause the stateChange event to fire (because of above subscribeStates cmd)
-		*/
-		// the variable testVariable is set to true as command (ack=false)
-		//await this.setStateAsync("testVariable", true);
-
-		// same thing, but the value is flagged "ack"
-		// ack should be always set to true if the value is received from or acknowledged from the target system
-		//await this.setStateAsync("testVariable", { val: true, ack: true });
-
-		// same thing, but the state is deleted after 30s (getState will return null afterwards)
-		//await this.setStateAsync("testVariable", { val: true, ack: true, expire: 30 });
-
-		// examples for the checkPassword/checkGroup functions
-		//let result = await this.checkPasswordAsync("admin", "iobroker");
-		//this.log.info("check user admin pw iobroker: " + result);
-
-		//result = await this.checkGroupAsync("admin", "admin");
-		//this.log.info("check group user admin group admin: " + result);
+		//setInterval(main, this.config.interval, this);
 	}
 
 	/**
@@ -281,23 +239,6 @@ class Fordpass extends utils.Adapter {
 			callback();
 		}
 	}
-
-	// If you need to react to object changes, uncomment the following block and the corresponding line in the constructor.
-	// You also need to subscribe to the objects with `this.subscribeObjects`, similar to `this.subscribeStates`.
-	// /**
-	//  * Is called if a subscribed object changes
-	//  * @param {string} id
-	//  * @param {ioBroker.Object | null | undefined} obj
-	//  */
-	// onObjectChange(id, obj) {
-	// 	if (obj) {
-	// 		// The object was changed
-	// 		this.log.info(`object ${id} changed: ${JSON.stringify(obj)}`);
-	// 	} else {
-	// 		// The object was deleted
-	// 		this.log.info(`object ${id} deleted`);
-	// 	}
-	// }
 
 	/**
 	 * Is called if a subscribed state changes
@@ -348,10 +289,12 @@ if (module.parent) {
 }
 
 async function main(object) {
+	object.log.info("Entering main");
 	const car = new fordApi.vehicle(object.config.user, object.config.password, object.config.vin);
 	await car.auth();
 	const vehicleData = await car.status();
 
+	object.log.info("Set states...");
 	await object.setStateAsync("VIN", { val: vehicleData.vin, ack: true });
 	await object.setStateAsync("Lockstatus", { val: vehicleData.lockStatus.value, ack: true });
 	await object.setStateAsync("Odometer", { val: vehicleData.odometer.value, ack: true });
@@ -365,5 +308,5 @@ async function main(object) {
 	await object.setStateAsync("batteryHealth", { val: vehicleData.battery.batteryHealth.value, ack: true });
 	await object.setStateAsync("batteryStatusActual", { val: vehicleData.battery.batteryStatusActual.value, ack: true });
 	await object.setStateAsync("tirePressure", { val: vehicleData.tirePressure.value, ack: true });
-	//object.log.info("Data Update");
+	object.log.info("Set states completed");
 }
