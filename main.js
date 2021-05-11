@@ -39,6 +39,32 @@ class Fordpass extends utils.Adapter {
 	async onReady() {
 		this.log.info("Entering onReady");
 
+		await this.declareStatesAsync();
+
+		const car = new fordApi.vehicle(this.config.user, this.config.password, this.config.vin);
+		await car.auth();
+		const vehicleData = await car.status();
+
+		this.log.info("Set states...");
+		await this.publishVehicleDataAsync("VIN", vehicleData, "vin");
+		await this.publishVehicleDataAsync("lockStatus", vehicleData, "lockStatus.value");
+		await this.publishVehicleDataAsync("odometer", vehicleData, "odometer.value");
+		await this.publishVehicleDataAsync("testOnly", vehicleData, "testOnly");
+		await this.publishVehicleDataAsync("fuelLevel", vehicleData, "fuel.fuelLevel");
+		await this.publishVehicleDataAsync("fuelDTE", vehicleData, "fuel.distanceToEmpty");
+		await this.publishVehicleDataAsync("batterySoC", vehicleData, "batteryFillLevel.value");
+		await this.publishVehicleDataAsync("batteryDTE", vehicleData, "elVehDTE.value");
+		await this.publishVehicleDataAsync("latitude", vehicleData, "gps.latitude");
+		await this.publishVehicleDataAsync("longitude", vehicleData, "gps.longitude");
+		await this.publishVehicleDataAsync("oilLife", vehicleData, "oil.oilLife");
+		await this.publishVehicleDataAsync("oilLifeActual", vehicleData, "oil.oilLifeActual");
+		await this.publishVehicleDataAsync("batteryHealth", vehicleData, "battery.batteryHealth.value");
+		await this.publishVehicleDataAsync("batteryStatusActual", vehicleData, "battery.batteryStatusActual.value");
+		await this.publishVehicleDataAsync("tirePressure", vehicleData, "tirePressure.value");
+		this.log.info("Set states completed");
+	}
+
+	async declareStatesAsync() {
 		this.setObjectNotExistsAsync("VIN", {
 			type: "state",
 			common: {
@@ -204,8 +230,28 @@ class Fordpass extends utils.Adapter {
 			},
 			native: {},
 		});
+	}
 
-		await main(this);
+	async publishVehicleDataAsync(object, stateName, vehicleData, valuePath) {
+		// check if value exists
+		if (!object || !vehicleData || !stateName || valuePath)
+			return;
+
+		const properties = valuePath.split(".");
+		let prop;
+
+		let value = vehicleData;
+		for (let i = 0; i < properties.length; i++) {
+			prop = properties[i];
+
+			if (!value || !Object.prototype.hasOwnProperty.call(value, prop)) {
+				return;
+			} else {
+				value = value[prop];
+			}
+		}
+
+		await object.setStateAsync(stateName, { val: value, ack: true });
 	}
 
 	/**
@@ -266,51 +312,4 @@ if (module.parent) {
 } else {
 	// otherwise start the instance directly
 	new Fordpass();
-}
-
-async function setStateAsync(object, stateName, vehicleData, valuePath) {
-	// check if value exists
-	if (!object || !vehicleData || !stateName || valuePath)
-		return;
-
-	const properties = valuePath.split(".");
-	let prop;
-
-	let value = vehicleData;
-	for (let i = 0; i < properties.length; i++) {
-		prop = properties[i];
-
-		if (!value || !Object.prototype.hasOwnProperty.call(value, prop)) {
-			return;
-		} else {
-			value = value[prop];
-		}
-	}
-
-	await object.setStateAsync(stateName, { val: value, ack: true });
-}
-
-async function main(object) {
-	object.log.info("Entering main");
-	const car = new fordApi.vehicle(object.config.user, object.config.password, object.config.vin);
-	await car.auth();
-	const vehicleData = await car.status();
-
-	object.log.info("Set states...");
-	await setStateAsync(object, "VIN", vehicleData, "vin");
-	await setStateAsync(object, "lockStatus", vehicleData, "lockStatus.value");
-	await setStateAsync(object, "odometer", vehicleData, "odometer.value");
-	await setStateAsync(object, "testOnly", vehicleData, "testOnly");
-	await setStateAsync(object, "fuelLevel", vehicleData, "fuel.fuelLevel");
-	await setStateAsync(object, "fuelDTE", vehicleData, "fuel.distanceToEmpty");
-	await setStateAsync(object, "batterySoC", vehicleData, "batteryFillLevel.value");
-	await setStateAsync(object, "batteryDTE", vehicleData, "elVehDTE.value");
-	await setStateAsync(object, "latitude", vehicleData, "gps.latitude");
-	await setStateAsync(object, "longitude", vehicleData, "gps.longitude");
-	await setStateAsync(object, "oilLife", vehicleData, "oil.oilLife");
-	await setStateAsync(object, "oilLifeActual", vehicleData, "oil.oilLifeActual");
-	await setStateAsync(object, "batteryHealth", vehicleData, "battery.batteryHealth.value");
-	await setStateAsync(object, "batteryStatusActual", vehicleData, "battery.batteryStatusActual.value");
-	await setStateAsync(object, "tirePressure", vehicleData, "tirePressure.value");
-	object.log.info("Set states completed");
 }
