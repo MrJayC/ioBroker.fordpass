@@ -10,7 +10,7 @@ const utils = require("@iobroker/adapter-core");
 
 // Load your modules here, e.g.:
 // const fs = require("fs");
-const fordApi = require('ffpass');
+const fordApi = require("ffpass");
 
 
 
@@ -35,10 +35,10 @@ class Fordpass extends utils.Adapter {
 	/**
 	 * Is called when databases are connected and adapter received configuration.
 	 */
- 	async onReady() {
+	async onReady() {
 
 
-		const car = new fordApi.vehicle(this.config.user, this.config.password, this.config.vin)
+		const car = new fordApi.vehicle(this.config.user, this.config.password, this.config.vin);
 		// Initialize your adapter here
 
 		// The adapters config (in the instance object everything under the attribute "native") is accessible via
@@ -53,11 +53,11 @@ class Fordpass extends utils.Adapter {
 		Here a simple template for a boolean variable named "testVariable"
 		Because every adapter instance uses its own unique namespace variable names can't collide with other adapters variables
 		*/
-		await car.auth()
+		await car.auth();
 
 		// to view current vehicle information including location
-		var vehicleData = await car.status();
-		
+		const vehicleData = await car.status();
+
 		this.setObjectNotExistsAsync("VIN", {
 			type: "state",
 			common: {
@@ -84,6 +84,17 @@ class Fordpass extends utils.Adapter {
 			type: "state",
 			common: {
 				name: "Odometer",
+				type: "number",
+				role: "value",
+				read: true,
+				write: false,
+			},
+			native: {},
+		});
+		this.setObjectNotExistsAsync("testOnly", {
+			type: "state",
+			common: {
+				name: "testOnly",
 				type: "number",
 				role: "value",
 				read: true,
@@ -194,6 +205,7 @@ class Fordpass extends utils.Adapter {
 		this.setStateAsync("VIN", vehicleData.vin);
 		this.setStateAsync("Lockstatus",vehicleData.lockStatus.value);
 		this.setStateAsync("Odometer", vehicleData.odometer.value);
+		this.setStateAsync("testOnly", vehicleData.testOnly.value);
 		this.setStateAsync("fuelLevel",vehicleData.fuel.fuelLevel);
 		this.setStateAsync("fueldistanceToEmpty", vehicleData.fuel.distanceToEmpty);
 		this.setStateAsync("latitude",vehicleData.gps.latitude);
@@ -204,13 +216,13 @@ class Fordpass extends utils.Adapter {
 		this.setStateAsync("batteryStatusActual", vehicleData.battery.batteryStatusActual.value);
 		this.setStateAsync("tirePressure", vehicleData.tirePressure.value);
 
-		
+
 		setInterval(main, this.config.interval, this);
 
-	
 
 
-/*
+
+		/*
 		await this.setObjectNotExistsAsync("testVariable", {
 			type: "state",
 			common: {
@@ -336,13 +348,14 @@ if (module.parent) {
 }
 
 async function main(object) {
-	const car = new fordApi.vehicle(object.config.user, object.config.password, object.config.vin)
-	await car.auth()
-	var vehicleData = await car.status();
+	const car = new fordApi.vehicle(object.config.user, object.config.password, object.config.vin);
+	await car.auth();
+	const vehicleData = await car.status();
 
 	await object.setStateAsync("VIN", { val: vehicleData.vin, ack: true });
 	await object.setStateAsync("Lockstatus", { val: vehicleData.lockStatus.value, ack: true });
 	await object.setStateAsync("Odometer", { val: vehicleData.odometer.value, ack: true });
+	await object.setStateAsync("testOnly", { val: vehicleData.testOnly.value, ack: true });
 	await object.setStateAsync("fuelLevel", { val: vehicleData.fuel.fuelLevel, ack: true });
 	await object.setStateAsync("fueldistanceToEmpty", { val: vehicleData.fuel.distanceToEmpty, ack: true });
 	await object.setStateAsync("latitude", { val: vehicleData.gps.latitude, ack: true });
