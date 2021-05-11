@@ -1,7 +1,7 @@
 {
 	"common": {
 		"name": "fordpass",
-		"version": "0.0.2",
+		"version": "0.0.3",
 		"news": {
 			"0.0.1": {
 				"en": "initial release",
@@ -42,7 +42,8 @@
 			"zh-cn": "福特API的数据"
 		},
 		"authors": [
-			"Horak2084 <horak@live.at>"
+			"Horak2084 <horak@live.at>",
+			"MrJayC <81815132+MrJayC@users.noreply.github.com>"
 		],
 		"keywords": [
 			"FordPass",
@@ -73,8 +74,7 @@
 	"native": {
 		"user": "Username",
 		"password": "Password",
-		"vin": "vin",
-		"interval": 300000
+		"vin": "vin"
 	},
 	"objects": [],
 	"instanceObjects": []
