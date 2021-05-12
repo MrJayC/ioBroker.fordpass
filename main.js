@@ -30,6 +30,8 @@ class Fordpass extends utils.Adapter {
 		// this.on("objectChange", this.onObjectChange.bind(this));
 		// this.on("message", this.onMessage.bind(this));
 		this.on("unload", this.onUnload.bind(this));
+
+		this.refreshTimer = null;
 	}
 
 	/**
@@ -37,34 +39,62 @@ class Fordpass extends utils.Adapter {
 	 * initializes all properties
 	 */
 	async onReady() {
-		this.log.info("Entering onReady");
+		await this.initObjectsAsync();
 
-		await this.declareStatesAsync();
-
-		const car = new fordApi.vehicle(this.config.user, this.config.password, this.config.vin);
-		await car.auth();
-		const vehicleData = await car.status();
-
-		this.log.info("Set states...");
-		await this.publishVehicleDataAsync("VIN", vehicleData, "vin");
-		await this.publishVehicleDataAsync("lockStatus", vehicleData, "lockStatus.value");
-		await this.publishVehicleDataAsync("odometer", vehicleData, "odometer.value");
-		await this.publishVehicleDataAsync("testOnly", vehicleData, "testOnly");
-		await this.publishVehicleDataAsync("fuelLevel", vehicleData, "fuel.fuelLevel");
-		await this.publishVehicleDataAsync("fuelDTE", vehicleData, "fuel.distanceToEmpty");
-		await this.publishVehicleDataAsync("batterySoC", vehicleData, "batteryFillLevel.value");
-		await this.publishVehicleDataAsync("batteryDTE", vehicleData, "elVehDTE.value");
-		await this.publishVehicleDataAsync("latitude", vehicleData, "gps.latitude");
-		await this.publishVehicleDataAsync("longitude", vehicleData, "gps.longitude");
-		await this.publishVehicleDataAsync("oilLife", vehicleData, "oil.oilLife");
-		await this.publishVehicleDataAsync("oilLifeActual", vehicleData, "oil.oilLifeActual");
-		await this.publishVehicleDataAsync("batteryHealth", vehicleData, "battery.batteryHealth.value");
-		await this.publishVehicleDataAsync("batteryStatusActual", vehicleData, "battery.batteryStatusActual.value");
-		await this.publishVehicleDataAsync("tirePressure", vehicleData, "tirePressure.value");
-		this.log.info("Set states completed");
+		setInterval(this.refreshVehDataAsync, this.config.interval, this);
+		await this.refreshVehDataAsync();
 	}
 
-	async declareStatesAsync() {
+	async refreshVehDataAsync() {
+		this.log.info("Updating vehicle data");
+		try {
+			const car = new fordApi.vehicle(this.config.user, this.config.password, this.config.vin);
+			await car.auth();
+			const vehicleData = await car.status();
+
+			await this.setVehDataValueAsync("VIN", vehicleData, "vin");
+			await this.setVehDataValueAsync("lockStatus", vehicleData, "lockStatus.value");
+			await this.setVehDataValueAsync("odometer", vehicleData, "odometer.value");
+			await this.setVehDataValueAsync("fuelLevel", vehicleData, "fuel.fuelLevel");
+			await this.setVehDataValueAsync("fuelDTE", vehicleData, "fuel.distanceToEmpty");
+			await this.setVehDataValueAsync("batterySoC", vehicleData, "batteryFillLevel.value");
+			await this.setVehDataValueAsync("batteryDTE", vehicleData, "elVehDTE.value");
+			await this.setVehDataValueAsync("plugStatus", vehicleData, "plugStatus.value");
+			await this.setVehDataValueAsync("chargingStatus", vehicleData, "chargingStatus.value");
+			await this.setVehDataValueAsync("latitude", vehicleData, "gps.latitude");
+			await this.setVehDataValueAsync("longitude", vehicleData, "gps.longitude");
+			await this.setVehDataValueAsync("oilLife", vehicleData, "oil.oilLife");
+			await this.setVehDataValueAsync("oilLifeActual", vehicleData, "oil.oilLifeActual");
+			await this.setVehDataValueAsync("batteryHealth", vehicleData, "battery.batteryHealth.value");
+			await this.setVehDataValueAsync("batteryStatusActual", vehicleData, "battery.batteryStatusActual.value");
+			await this.setVehDataValueAsync("tirePressure", vehicleData, "tirePressure.value");
+		} catch (e) {
+			this.log.error("Error while updating vehicle data: " + e.message);
+		}
+	}
+
+	async setVehDataValueAsync(stateName, vehicleData, valuePath) {
+		if (!vehicleData || !stateName || !valuePath)
+			return;
+
+		const properties = valuePath.split(".");
+		let prop;
+
+		let value = vehicleData;
+		for (let i = 0; i < properties.length; i++) {
+			prop = properties[i];
+
+			if (!value || !Object.prototype.hasOwnProperty.call(value, prop)) {
+				return;
+			} else {
+				value = value[prop];
+			}
+		}
+
+		await this.setStateAsync(stateName, { val: value, ack: true });
+	}
+
+	async initObjectsAsync() {
 		this.setObjectNotExistsAsync("VIN", {
 			type: "state",
 			common: {
@@ -91,17 +121,6 @@ class Fordpass extends utils.Adapter {
 			type: "state",
 			common: {
 				name: "Odometer",
-				type: "number",
-				role: "value",
-				read: true,
-				write: false,
-			},
-			native: {},
-		});
-		this.setObjectNotExistsAsync("testOnly", {
-			type: "state",
-			common: {
-				name: "Test Only",
 				type: "number",
 				role: "value",
 				read: true,
@@ -146,6 +165,28 @@ class Fordpass extends utils.Adapter {
 			type: "state",
 			common: {
 				name: "Electric Range",
+				type: "number",
+				role: "value",
+				read: true,
+				write: false,
+			},
+			native: {},
+		});
+		this.setObjectNotExistsAsync("plugStatus", {
+			type: "state",
+			common: {
+				name: "Charger Connected",
+				type: "number",
+				role: "value",
+				read: true,
+				write: false,
+			},
+			native: {},
+		});
+		this.setObjectNotExistsAsync("chargingStatus", {
+			type: "state",
+			common: {
+				name: "Charging Status",
 				type: "number",
 				role: "value",
 				read: true,
@@ -232,33 +273,14 @@ class Fordpass extends utils.Adapter {
 		});
 	}
 
-	async publishVehicleDataAsync(stateName, vehicleData, valuePath) {
-		if (!vehicleData || !stateName || !valuePath)
-			return;
-
-		const properties = valuePath.split(".");
-		let prop;
-
-		let value = vehicleData;
-		for (let i = 0; i < properties.length; i++) {
-			prop = properties[i];
-
-			if (!value || !Object.prototype.hasOwnProperty.call(value, prop)) {
-				return;
-			} else {
-				value = value[prop];
-			}
-		}
-
-		await this.setStateAsync(stateName, { val: value, ack: true });
-	}
-
 	/**
 	 * Is called when adapter shuts down - callback has to be called under any circumstances!
 	 * @param {() => void} callback
 	 */
 	onUnload(callback) {
 		try {
+			clearInterval(this.refreshTimer);
+
 			callback();
 		} catch (e) {
 			callback();
