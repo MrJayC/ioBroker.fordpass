@@ -41,7 +41,7 @@ class Fordpass extends utils.Adapter {
 	async onReady() {
 		await this.initObjectsAsync();
 
-		setInterval(this.refreshVehDataAsync, this.config.interval, this);
+		this.refreshTimer = setInterval(() => this.refreshVehDataAsync(), this.config.interval);
 		await this.refreshVehDataAsync();
 	}
 
@@ -279,7 +279,7 @@ class Fordpass extends utils.Adapter {
 	 */
 	onUnload(callback) {
 		try {
-			clearInterval(this.refreshTimer);
+			if (this.refreshTimer) clearInterval(this.refreshTimer);
 
 			callback();
 		} catch (e) {
